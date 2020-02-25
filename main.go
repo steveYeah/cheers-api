@@ -7,9 +7,12 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 )
 
-type Toast struct {
+type toast struct {
 	Quote  string `json:"quote"`
 	Cheers string `json:"cheers"`
 }
@@ -20,10 +23,20 @@ func main() {
 		log.Fatal("$PORT must be set")
 	}
 
+	router := mux.NewRouter()
+	headers := handlers.AllowedHeaders(
+		[]string{"X-Requested-With", "Content-Type", "Authorization"},
+	)
+	methods := handlers.AllowedMethods([]string{"GET"})
+	origins := handlers.AllowedOrigins([]string{"*"})
+
 	rand.Seed(time.Now().Unix())
 
-	http.HandleFunc("/api", handler)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	router.HandleFunc("/api", handler).Methods("GET")
+	log.Fatal(http.ListenAndServe(
+		":"+port,
+		handlers.CORS(headers, methods, origins)(router)),
+	)
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +51,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	w.Write(toastJSON)
 }
 
-func createToast() Toast {
+func createToast() toast {
 	toasts := [10]string{
 		"Here's to those who've seen us at our best and seen us at our worst and can't tell the difference.",
 		"To our wives and girlfriends ... may they never meet",
@@ -65,7 +78,7 @@ func createToast() Toast {
 		"į sveikatą",
 	}
 
-	return Toast{
+	return toast{
 		toasts[rand.Intn(len(toasts))],
 		cheers[rand.Intn(len(cheers))],
 	}
